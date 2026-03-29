@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conectando Doações</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .hero {
+      padding: 48px 24px 32px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .hero h1 { font-size: 26px; font-weight: 700; line-height: 1.2; }
+    .hero p { font-size: 14px; color: var(--texto-sec); line-height: 1.7; max-width: 300px; }
+    .como-funciona {
+      padding: 0 16px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px;
+      background: var(--fundo);
+      border-radius: var(--radius);
+    }
+    .step-num {
+      width: 32px;
+      height: 32px;
+      background: var(--verde);
+      color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .step-text h3 { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+    .step-text p  { font-size: 13px; color: var(--texto-sec); }
+    .login-box {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .sent-box {
+      display: none;
+      background: var(--verde-claro);
+      border-radius: var(--radius);
+      padding: 20px;
+      text-align: center;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .sent-box.show { display: flex; }
+    .sent-icon { font-size: 36px; }
+    .sent-box h3 { font-size: 16px; font-weight: 700; color: var(--verde-escuro); }
+    .sent-box p  { font-size: 13px; color: var(--verde-escuro); line-height: 1.6; }
+    .qr-info {
+      margin: 0 16px 32px;
+      border: 1px solid var(--borda);
+      border-radius: var(--radius);
+      padding: 16px;
+      text-align: center;
+    }
+    .qr-info p { font-size: 13px; color: var(--texto-sec); margin-top: 8px; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="logo-icon">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+        <path d="M16 4C9.4 4 4 9.4 4 16s5.4 12 12 12 12-5.4 12-12S22.6 4 16 4zm-1.5 16.4l-4.8-4.8 1.6-1.6 3.2 3.2 6.8-7.8 1.7 1.5-8.5 9.5z" fill="white"/>
+      </svg>
+    </div>
+    <h1>Conectando<br>Doações</h1>
+    <p>Doe com facilidade. Receba com gratidão. Conectamos quem quer ajudar com quem precisa.</p>
+  </div>
+
+  <!-- Como funciona -->
+  <div class="como-funciona">
+    <p class="section-label" style="padding: 0 2px;">Como funciona</p>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-text">
+        <h3>Entre com seu e-mail</h3>
+        <p>Sem senha. Enviaremos um link de acesso direto para você.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-text">
+        <h3>Anuncie ou busque doações</h3>
+        <p>Doadores publicam itens. Instituições encontram o que precisam.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-text">
+        <h3>Combine pelo chat</h3>
+        <p>Converse diretamente na plataforma e agende a retirada.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Login -->
+  <div class="login-box">
+    <div id="alertBox"></div>
+
+    <div id="loginForm">
+      <div class="form-group">
+        <label for="emailInput">Seu e-mail</label>
+        <input type="email" id="emailInput" placeholder="nome@exemplo.com" autocomplete="email">
+      </div>
+      <button class="btn btn-primary" id="btnEnviar" onclick="enviarLink()">
+        Enviar link de acesso
+      </button>
+      <p class="text-muted text-center" style="font-size:13px;">
+        Ao continuar, você concorda com os Termos de Uso.
+      </p>
+    </div>
+
+    <div class="sent-box" id="sentBox">
+      <div class="sent-icon">📬</div>
+      <h3>Link enviado!</h3>
+      <p>Verifique sua caixa de entrada e clique no link que enviamos para <strong id="emailMostrado"></strong></p>
+      <button class="btn btn-outline" onclick="document.getElementById('sentBox').classList.remove('show'); document.getElementById('loginForm').style.display='flex';" style="margin-top:8px;">
+        Usar outro e-mail
+      </button>
+    </div>
+  </div>
+
+  <!-- QR Code info -->
+  <div class="qr-info">
+    <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+      <rect x="8" y="8" width="24" height="24" rx="2" stroke="#1D9E75" stroke-width="3"/>
+      <rect x="14" y="14" width="12" height="12" rx="1" fill="#1D9E75"/>
+      <rect x="48" y="8" width="24" height="24" rx="2" stroke="#1D9E75" stroke-width="3"/>
+      <rect x="54" y="14" width="12" height="12" rx="1" fill="#1D9E75"/>
+      <rect x="8" y="48" width="24" height="24" rx="2" stroke="#1D9E75" stroke-width="3"/>
+      <rect x="14" y="54" width="12" height="12" rx="1" fill="#1D9E75"/>
+      <rect x="48" y="48" width="8" height="8" rx="1" fill="#1D9E75"/>
+      <rect x="60" y="48" width="8" height="8" rx="1" fill="#1D9E75"/>
+      <rect x="48" y="60" width="8" height="8" rx="1" fill="#1D9E75"/>
+      <rect x="60" y="60" width="8" height="8" rx="1" fill="#1D9E75"/>
+    </svg>
+    <p>Escaneie o QR Code ou acesse o link direto para acessar a plataforma pelo celular.</p>
+  </div>
+
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
+
+<script>
+  // Se já estiver logado, redireciona
+  auth.onAuthStateChanged(async (user) => {
+    if (user) {
+      const doc = await db.collection('users').doc(user.uid).get();
+      if (doc.exists) {
+        const tipo = doc.data().tipo;
+        window.location.href = tipo === 'doador' ? 'doador.html' : 'instituicao.html';
+      } else {
+        window.location.href = 'perfil.html';
+      }
+    }
+  });
+
+  // Processar link mágico ao carregar (retorno do e-mail)
+  if (firebase.auth().isSignInWithEmailLink(window.location.href)) {
+    let email = window.localStorage.getItem('emailParaLogin');
+    if (!email) {
+      email = window.prompt('Por favor, informe seu e-mail para confirmar o acesso:');
+    }
+    auth.signInWithEmailLink(email, window.location.href)
+      .then(async (result) => {
+        window.localStorage.removeItem('emailParaLogin');
+        const doc = await db.collection('users').doc(result.user.uid).get();
+        window.location.href = doc.exists ? (doc.data().tipo === 'doador' ? 'doador.html' : 'instituicao.html') : 'perfil.html';
+      })
+      .catch((error) => {
+        mostrarAlerta('Link inválido ou expirado. Tente novamente.', 'error');
+      });
+  }
+
+  function mostrarAlerta(msg, tipo) {
+    document.getElementById('alertBox').innerHTML =
+      `<div class="alert alert-${tipo === 'error' ? 'error' : 'success'}">${msg}</div>`;
+  }
+
+  async function enviarLink() {
+    const email = document.getElementById('emailInput').value.trim();
+    if (!email || !email.includes('@')) {
+      mostrarAlerta('Por favor, informe um e-mail válido.', 'error');
+      return;
+    }
+
+    const btn = document.getElementById('btnEnviar');
+    btn.innerHTML = '<span class="spinner"></span>';
+    btn.disabled = true;
+
+    const actionCodeSettings = {
+  url: 'https://doeja-2333f.web.app/index.html',
+  handleCodeInApp: true
+};
+
+    try {
+      await auth.sendSignInLinkToEmail(email, actionCodeSettings);
+      window.localStorage.setItem('emailParaLogin', email);
+      document.getElementById('emailMostrado').textContent = email;
+      document.getElementById('loginForm').style.display = 'none';
+      document.getElementById('sentBox').classList.add('show');
+    } catch (e) {
+      mostrarAlerta('Erro ao enviar o link. Verifique o e-mail e tente novamente.', 'error');
+      btn.innerHTML = 'Enviar link de acesso';
+      btn.disabled = false;
+    }
+  }
+</script>
+</body>
+</html>

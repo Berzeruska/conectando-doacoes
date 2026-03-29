@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seu Perfil – Conectando Doações</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .perfil-hero {
+      padding: 32px 24px 24px;
+      text-align: center;
+    }
+    .perfil-hero h2 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+    .perfil-hero p  { font-size: 14px; color: var(--texto-sec); line-height: 1.6; }
+
+    .tipo-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 0 16px 16px;
+    }
+
+    .tipo-card {
+      background: var(--branco);
+      border: 2px solid var(--borda);
+      border-radius: var(--radius);
+      padding: 24px 16px;
+      cursor: pointer;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .tipo-card:hover { border-color: var(--verde); background: var(--verde-claro); }
+    .tipo-card.selected { border-color: var(--verde); background: var(--verde-claro); }
+
+    .tipo-icon { font-size: 40px; }
+    .tipo-card h3 { font-size: 15px; font-weight: 700; }
+    .tipo-card p  { font-size: 13px; color: var(--texto-sec); line-height: 1.4; }
+
+    .nome-box { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 12px; }
+    .nome-box.hidden { display: none; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="topbar">
+    <div class="logo-icon" style="width:36px;height:36px;border-radius:10px;">
+      <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+        <path d="M16 4C9.4 4 4 9.4 4 16s5.4 12 12 12 12-5.4 12-12S22.6 4 16 4zm-1.5 16.4l-4.8-4.8 1.6-1.6 3.2 3.2 6.8-7.8 1.7 1.5-8.5 9.5z" fill="white"/>
+      </svg>
+    </div>
+    <span class="topbar-title">Bem-vindo!</span>
+    <button onclick="auth.signOut().then(()=>location.href='index.html')" class="back-btn" style="font-size:14px;color:var(--texto-sec);">Sair</button>
+  </div>
+
+  <div class="perfil-hero">
+    <h2>Quem é você?</h2>
+    <p>Escolha seu perfil para personalizar a experiência na plataforma.</p>
+  </div>
+
+  <div id="alertBox" style="padding:0 16px;"></div>
+
+  <div class="tipo-grid">
+    <div class="tipo-card" id="cardDoador" onclick="selecionarTipo('doador')">
+      <div class="tipo-icon">❤️</div>
+      <h3>Quero doar</h3>
+      <p>Tenho itens que desejo oferecer a quem precisa</p>
+    </div>
+    <div class="tipo-card" id="cardInst" onclick="selecionarTipo('instituicao')">
+      <div class="tipo-icon">🏫</div>
+      <h3>Sou instituição</h3>
+      <p>Asilo, escola, ONG ou entidade beneficente</p>
+    </div>
+  </div>
+
+  <div class="nome-box hidden" id="nomeBox">
+    <div class="form-group">
+      <label for="nomeInput" id="nomeLabel">Seu nome completo</label>
+      <input type="text" id="nomeInput" placeholder="Como devemos te chamar?">
+    </div>
+    <div id="nomeInstBox" class="form-group hidden">
+      <label for="nomeInstInput">Nome da instituição</label>
+      <input type="text" id="nomeInstInput" placeholder="Ex: Lar dos Idosos São José">
+    </div>
+    <button class="btn btn-primary" id="btnConfirmar" onclick="confirmarPerfil()">
+      Confirmar e entrar
+    </button>
+  </div>
+
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+  let tipoSelecionado = null;
+  let usuarioAtual = null;
+
+  auth.onAuthStateChanged(async (user) => {
+    if (!user) { window.location.href = 'index.html'; return; }
+    usuarioAtual = user;
+    const doc = await db.collection('users').doc(user.uid).get();
+    if (doc.exists) {
+      window.location.href = doc.data().tipo === 'doador' ? 'doador.html' : 'instituicao.html';
+    }
+  });
+
+  function selecionarTipo(tipo) {
+    tipoSelecionado = tipo;
+    document.getElementById('cardDoador').classList.toggle('selected', tipo === 'doador');
+    document.getElementById('cardInst').classList.toggle('selected', tipo === 'instituicao');
+    document.getElementById('nomeBox').classList.remove('hidden');
+
+    if (tipo === 'instituicao') {
+      document.getElementById('nomeLabel').textContent = 'Nome do responsável';
+      document.getElementById('nomeInstBox').classList.remove('hidden');
+    } else {
+      document.getElementById('nomeLabel').textContent = 'Seu nome completo';
+      document.getElementById('nomeInstBox').classList.add('hidden');
+    }
+  }
+
+  async function confirmarPerfil() {
+    const nome = document.getElementById('nomeInput').value.trim();
+    if (!nome) { mostrarAlerta('Por favor, informe seu nome.', 'error'); return; }
+    if (!tipoSelecionado) { mostrarAlerta('Selecione um perfil.', 'error'); return; }
+
+    const btn = document.getElementById('btnConfirmar');
+    btn.innerHTML = '<span class="spinner"></span>';
+    btn.disabled = true;
+
+    const dados = {
+      uid: usuarioAtual.uid,
+      email: usuarioAtual.email,
+      tipo: tipoSelecionado,
+      nome: nome,
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    if (tipoSelecionado === 'instituicao') {
+      const nomeInst = document.getElementById('nomeInstInput').value.trim();
+      if (!nomeInst) { mostrarAlerta('Informe o nome da instituição.', 'error'); btn.innerHTML='Confirmar e entrar'; btn.disabled=false; return; }
+      dados.nomeInstituicao = nomeInst;
+    }
+
+    try {
+      await db.collection('users').doc(usuarioAtual.uid).set(dados);
+      window.location.href = tipoSelecionado === 'doador' ? 'doador.html' : 'instituicao.html';
+    } catch (e) {
+      mostrarAlerta('Erro ao salvar perfil. Tente novamente.', 'error');
+      btn.innerHTML = 'Confirmar e entrar';
+      btn.disabled = false;
+    }
+  }
+
+  function mostrarAlerta(msg, tipo) {
+    document.getElementById('alertBox').innerHTML =
+      `<div class="alert alert-${tipo === 'error' ? 'error' : 'success'}" style="margin-bottom:12px;">${msg}</div>`;
+  }
+</script>
+</body>
+</html>

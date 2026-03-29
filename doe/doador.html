@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Doador – Conectando Doações</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .user-header {
+      padding: 20px 16px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--borda);
+    }
+    .avatar {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: var(--verde-claro); color: var(--verde-escuro);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 18px; flex-shrink: 0;
+    }
+    .anuncio-card-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--borda);
+    }
+    .anuncio-thumb {
+      width: 72px; height: 72px; border-radius: var(--radius-sm);
+      background: var(--fundo); flex-shrink: 0; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px;
+    }
+    .anuncio-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .anuncio-info { flex: 1; min-width: 0; }
+    .anuncio-titulo { font-weight: 700; font-size: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .anuncio-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+    .fab {
+      position: fixed; bottom: 24px; right: calc(50% - 240px + 16px);
+      width: 56px; height: 56px; border-radius: 50%;
+      background: var(--verde); border: none; color: #fff;
+      font-size: 26px; cursor: pointer; box-shadow: 0 4px 16px rgba(29,158,117,0.4);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200; transition: transform 0.15s;
+    }
+    .fab:hover { transform: scale(1.08); }
+    @media (max-width: 520px) { .fab { right: 16px; } }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="topbar">
+    <div class="logo-icon" style="width:36px;height:36px;border-radius:10px;">
+      <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+        <path d="M16 4C9.4 4 4 9.4 4 16s5.4 12 12 12 12-5.4 12-12S22.6 4 16 4zm-1.5 16.4l-4.8-4.8 1.6-1.6 3.2 3.2 6.8-7.8 1.7 1.5-8.5 9.5z" fill="white"/>
+      </svg>
+    </div>
+    <span class="topbar-title">Meus Anúncios</span>
+    <button onclick="auth.signOut().then(()=>location.href='index.html')" style="background:none;border:none;font-size:13px;color:var(--texto-sec);cursor:pointer;font-family:inherit;font-weight:600;">Sair</button>
+  </div>
+
+  <div class="user-header" id="userHeader">
+    <div class="avatar" id="avatarInicial">?</div>
+    <div>
+      <div style="font-weight:700;" id="nomeUsuario">Carregando...</div>
+      <div style="font-size:12px;color:var(--texto-sec);">Doador</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="abrirTab('ativos', this)">Ativos</div>
+    <div class="tab" onclick="abrirTab('reservados', this)">Reservados</div>
+    <div class="tab" onclick="abrirTab('finalizados', this)">Finalizados</div>
+    <div class="tab" onclick="abrirTab('conversas', this)">Conversas</div>
+  </div>
+
+  <div id="alertBox" style="padding:8px 16px 0;"></div>
+
+  <div id="painel-ativos" class="tab-panel active content" style="padding-top:8px;">
+    <div id="lista-ativos"><div class="empty-state"><div class="spinner" style="border-color:var(--verde);border-top-color:transparent;width:32px;height:32px;margin:0 auto 12px;"></div><p>Carregando...</p></div></div>
+  </div>
+  <div id="painel-reservados" class="tab-panel">
+    <div id="lista-reservados"><div class="empty-state"><div class="empty-icon">📋</div><p>Nenhum anúncio reservado ainda.</p></div></div>
+  </div>
+  <div id="painel-finalizados" class="tab-panel">
+    <div id="lista-finalizados"><div class="empty-state"><div class="empty-icon">✅</div><p>Nenhuma doação concluída ainda.</p></div></div>
+  </div>
+  <div id="painel-conversas" class="tab-panel">
+    <div id="lista-conversas"><div class="empty-state"><div class="empty-icon">💬</div><p>Nenhuma conversa ativa.</p></div></div>
+  </div>
+
+  <button class="fab" onclick="abrirModalNovo()" title="Novo anúncio">+</button>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay hidden" id="modalOverlay" onclick="fecharModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modalTitulo">Novo anúncio</span>
+      <button class="modal-close" onclick="document.getElementById('modalOverlay').classList.add('hidden')">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <input type="hidden" id="editId">
+
+      <div class="form-group">
+        <label>Título *</label>
+        <input type="text" id="fTitulo" placeholder="Ex: Cadeira de rodas em bom estado" maxlength="100">
+        <span id="fTituloCount" style="font-size:11px;color:var(--texto-sec);text-align:right;">0/100</span>
+      </div>
+      <div class="form-group">
+        <label>Categoria *</label>
+        <select id="fCategoria">
+          <option value="">Selecione...</option>
+          <option>Alimentos</option>
+          <option>Roupas</option>
+          <option>Móveis</option>
+          <option>Brinquedos</option>
+          <option>Material Escolar</option>
+          <option>Outros</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Descrição *</label>
+        <textarea id="fDescricao" placeholder="Descreva o item, estado de conservação..." maxlength="500"></textarea>
+        <span id="fDescCount" style="font-size:11px;color:var(--texto-sec);text-align:right;">0/500</span>
+      </div>
+      <div class="form-group">
+        <label>Localização (opcional)</label>
+        <input type="text" id="fLocalizacao" placeholder="Ex: Jaguariaíva, PR">
+      </div>
+      <div class="form-group">
+        <label>Foto (opcional)</label>
+        <div class="upload-area" onclick="document.getElementById('fFoto').click()">
+          <div id="uploadPreview">
+            <div style="font-size:32px;margin-bottom:6px;">📷</div>
+            <p style="font-size:13px;color:var(--texto-sec);">Toque para adicionar foto<br><span style="font-size:11px;">JPG ou PNG · máx. 500KB</span></p>
+          </div>
+        </div>
+        <input type="file" id="fFoto" accept="image/jpeg,image/png" style="display:none" onchange="previewFoto(this)">
+        <button id="btnRemoverFoto" style="display:none;background:none;border:none;color:var(--vermelho);font-size:13px;cursor:pointer;padding:4px 0;font-family:inherit;" onclick="removerFoto()">Remover foto</button>
+      </div>
+
+      <div id="modalAlerta"></div>
+      <button class="btn btn-primary" id="btnSalvar" onclick="salvarAnuncio()">Publicar anúncio</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+  let uid = null;
+  let fotoBase64 = null;
+  let fotoBase64Existente = null;
+  const categoriaEmoji = { Alimentos:'🍎', Roupas:'👕', Móveis:'🛋️', Brinquedos:'🧸', 'Material Escolar':'📚', Outros:'📦' };
+
+  auth.onAuthStateChanged(async (user) => {
+    if (!user) { window.location.href = 'index.html'; return; }
+    uid = user.uid;
+    const doc = await db.collection('users').doc(uid).get();
+    if (!doc.exists || doc.data().tipo !== 'doador') { window.location.href = 'index.html'; return; }
+    const nome = doc.data().nome || user.email;
+    document.getElementById('nomeUsuario').textContent = nome;
+    document.getElementById('avatarInicial').textContent = nome[0].toUpperCase();
+    carregarAnuncios();
+    carregarConversas();
+  });
+
+  document.getElementById('fTitulo').addEventListener('input', function() {
+    document.getElementById('fTituloCount').textContent = this.value.length + '/100';
+  });
+  document.getElementById('fDescricao').addEventListener('input', function() {
+    document.getElementById('fDescCount').textContent = this.value.length + '/500';
+  });
+
+  function abrirTab(id, el) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('painel-' + id).classList.add('active');
+    el.classList.add('active');
+  }
+
+  function carregarAnuncios() {
+    const query = db.collection('anuncios').where('doadorId', '==', uid);
+
+    const processar = (snap) => {
+      const ativos = [], reservados = [], finalizados = [];
+      snap.forEach(doc => {
+        const d = { id: doc.id, ...doc.data() };
+        if (d.status === 'disponível') ativos.push(d);
+        else if (d.status === 'reservado') reservados.push(d);
+        else finalizados.push(d);
+      });
+      renderLista('lista-ativos', ativos, 'disponível');
+      renderLista('lista-reservados', reservados, 'reservado');
+      renderLista('lista-finalizados', finalizados, 'finalizado');
+    };
+
+    // Tenta com ordenação, cai sem ordenação se índice não existir
+    query.orderBy('dataCriacao', 'desc').onSnapshot(processar, () => {
+      query.onSnapshot(processar);
+    });
+  }
+
+  function renderLista(containerId, itens, status) {
+    const el = document.getElementById(containerId);
+    if (!itens.length) {
+      const msgs = { disponível:'Nenhum anúncio ativo. Clique em + para criar.', reservado:'Nenhum anúncio reservado.', finalizado:'Nenhuma doação concluída.' };
+      el.innerHTML = `<div class="empty-state"><div class="empty-icon">${status==='disponível'?'📦':status==='reservado'?'📋':'✅'}</div><p>${msgs[status]}</p></div>`;
+      return;
+    }
+    el.innerHTML = itens.map(a => `
+      <div class="anuncio-card-row">
+        <div class="anuncio-thumb">
+          ${a.fotoBase64 ? `<img src="${a.fotoBase64}" alt="">` : (categoriaEmoji[a.categoria]||'📦')}
+        </div>
+        <div class="anuncio-info">
+          <div class="anuncio-titulo">${escHTML(a.titulo)}</div>
+          <div class="anuncio-meta">${escHTML(a.categoria)}${a.localizacao?' · '+escHTML(a.localizacao):''}</div>
+          <span class="badge badge-${a.status==='disponível'?'disponivel':a.status==='reservado'?'reservado':'finalizado'}">${a.status}</span>
+          <div class="anuncio-actions">
+            ${status !== 'finalizado' ? `<button class="btn btn-outline btn-sm" onclick="abrirModalEditar('${a.id}')">Editar</button>` : ''}
+            ${status === 'disponível' ? `<button class="btn btn-danger btn-sm" onclick="excluirAnuncio('${a.id}')">Excluir</button>` : ''}
+            ${status === 'reservado' ? `<button class="btn btn-primary btn-sm" onclick="irParaChat('${a.id}')">Ver chat</button>` : ''}
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function carregarConversas() {
+    db.collection('conversas').where('doadorId', '==', uid).where('statusConversa', '==', 'ativa')
+      .onSnapshot(snap => {
+        const el = document.getElementById('lista-conversas');
+        if (snap.empty) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">💬</div><p>Nenhuma conversa ativa.</p></div>'; return; }
+        const promises = snap.docs.map(async doc => {
+          const d = doc.data();
+          const anuncioDoc = await db.collection('anuncios').doc(d.anuncioId).get();
+          const instDoc = await db.collection('users').doc(d.instituicaoId).get();
+          const titulo = anuncioDoc.exists ? anuncioDoc.data().titulo : 'Anúncio';
+          const inst = instDoc.exists ? (instDoc.data().nomeInstituicao || instDoc.data().nome) : 'Instituição';
+          return `
+            <div class="anuncio-card-row" style="cursor:pointer;" onclick="window.location.href='chat.html?id=${doc.id}'">
+              <div class="anuncio-thumb">💬</div>
+              <div class="anuncio-info">
+                <div class="anuncio-titulo">${escHTML(titulo)}</div>
+                <div class="anuncio-meta">${escHTML(inst)}</div>
+                <span class="badge badge-reservado">Em andamento</span>
+              </div>
+            </div>`;
+        });
+        Promise.all(promises).then(items => { el.innerHTML = items.join(''); });
+      });
+  }
+
+  function irParaChat(anuncioId) {
+    db.collection('conversas').where('anuncioId', '==', anuncioId).limit(1).get()
+      .then(snap => { if (!snap.empty) window.location.href = 'chat.html?id=' + snap.docs[0].id; });
+  }
+
+  function abrirModalNovo() {
+    document.getElementById('editId').value = '';
+    document.getElementById('fTitulo').value = '';
+    document.getElementById('fCategoria').value = '';
+    document.getElementById('fDescricao').value = '';
+    document.getElementById('fLocalizacao').value = '';
+    document.getElementById('uploadPreview').innerHTML = '<div style="font-size:32px;margin-bottom:6px;">📷</div><p style="font-size:13px;color:var(--texto-sec);">Toque para adicionar foto<br><span style="font-size:11px;">JPG ou PNG · máx. 500KB</span></p>';
+    document.getElementById('btnRemoverFoto').style.display = 'none';
+    document.getElementById('fTituloCount').textContent = '0/100';
+    document.getElementById('fDescCount').textContent = '0/500';
+    document.getElementById('modalTitulo').textContent = 'Novo anúncio';
+    document.getElementById('btnSalvar').textContent = 'Publicar anúncio';
+    document.getElementById('modalAlerta').innerHTML = '';
+    fotoBase64 = null; fotoBase64Existente = null;
+    document.getElementById('fFoto').value = '';
+    document.getElementById('modalOverlay').classList.remove('hidden');
+  }
+
+  async function abrirModalEditar(id) {
+    const doc = await db.collection('anuncios').doc(id).get();
+    if (!doc.exists) return;
+    const d = doc.data();
+    document.getElementById('editId').value = id;
+    document.getElementById('fTitulo').value = d.titulo || '';
+    document.getElementById('fCategoria').value = d.categoria || '';
+    document.getElementById('fDescricao').value = d.descricao || '';
+    document.getElementById('fLocalizacao').value = d.localizacao || '';
+    document.getElementById('fTituloCount').textContent = (d.titulo||'').length + '/100';
+    document.getElementById('fDescCount').textContent = (d.descricao||'').length + '/500';
+    document.getElementById('modalTitulo').textContent = 'Editar anúncio';
+    document.getElementById('btnSalvar').textContent = 'Salvar alterações';
+    document.getElementById('modalAlerta').innerHTML = '';
+    fotoBase64 = null;
+    fotoBase64Existente = d.fotoBase64 || null;
+    if (d.fotoBase64) {
+      document.getElementById('uploadPreview').innerHTML = `<img src="${d.fotoBase64}" style="max-height:160px;border-radius:8px;object-fit:cover;">`;
+      document.getElementById('btnRemoverFoto').style.display = 'block';
+    } else {
+      document.getElementById('uploadPreview').innerHTML = '<div style="font-size:32px;margin-bottom:6px;">📷</div><p style="font-size:13px;color:var(--texto-sec);">Toque para adicionar foto</p>';
+      document.getElementById('btnRemoverFoto').style.display = 'none';
+    }
+    document.getElementById('modalOverlay').classList.remove('hidden');
+  }
+
+  function fecharModal(e) {
+    if (e.target === document.getElementById('modalOverlay'))
+      document.getElementById('modalOverlay').classList.add('hidden');
+  }
+
+  function previewFoto(input) {
+    const arquivo = input.files[0];
+    if (!arquivo) return;
+    if (arquivo.size > 500 * 1024) {
+      alertModal('Foto maior que 500KB. Escolha uma imagem menor ou comprima antes de enviar.');
+      input.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = e => {
+      fotoBase64 = e.target.result;
+      document.getElementById('uploadPreview').innerHTML = `<img src="${fotoBase64}" style="max-height:160px;border-radius:8px;object-fit:cover;">`;
+      document.getElementById('btnRemoverFoto').style.display = 'block';
+    };
+    reader.readAsDataURL(arquivo);
+  }
+
+  function removerFoto() {
+    fotoBase64 = null; fotoBase64Existente = null;
+    document.getElementById('uploadPreview').innerHTML = '<div style="font-size:32px;margin-bottom:6px;">📷</div><p style="font-size:13px;color:var(--texto-sec);">Toque para adicionar foto</p>';
+    document.getElementById('btnRemoverFoto').style.display = 'none';
+    document.getElementById('fFoto').value = '';
+  }
+
+  async function salvarAnuncio() {
+    const titulo = document.getElementById('fTitulo').value.trim();
+    const categoria = document.getElementById('fCategoria').value;
+    const descricao = document.getElementById('fDescricao').value.trim();
+    const localizacao = document.getElementById('fLocalizacao').value.trim();
+    const editId = document.getElementById('editId').value;
+
+    if (!titulo) { alertModal('Informe o título do anúncio.'); return; }
+    if (!categoria) { alertModal('Selecione uma categoria.'); return; }
+    if (!descricao) { alertModal('Informe a descrição.'); return; }
+
+    const btn = document.getElementById('btnSalvar');
+    btn.innerHTML = '<span class="spinner"></span>'; btn.disabled = true;
+
+    try {
+      const fotoFinal = fotoBase64 || fotoBase64Existente || null;
+      const dados = { titulo, categoria, descricao, localizacao, fotoBase64: fotoFinal, doadorId: uid };
+
+      if (editId) {
+        await db.collection('anuncios').doc(editId).update(dados);
+      } else {
+        dados.status = 'disponível';
+        dados.dataCriacao = firebase.firestore.FieldValue.serverTimestamp();
+        await db.collection('anuncios').add(dados);
+      }
+      document.getElementById('modalOverlay').classList.add('hidden');
+    } catch(e) {
+      console.error(e);
+      alertModal('Erro ao salvar: ' + e.message);
+    }
+    btn.innerHTML = editId ? 'Salvar alterações' : 'Publicar anúncio';
+    btn.disabled = false;
+  }
+
+  async function excluirAnuncio(id) {
+    if (!confirm('Excluir este anúncio?')) return;
+    await db.collection('anuncios').doc(id).delete();
+  }
+
+  function alertModal(msg) {
+    document.getElementById('modalAlerta').innerHTML = `<div class="alert alert-error">${msg}</div>`;
+  }
+
+  function escHTML(str) {
+    return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+</script>
+</body>
+</html>

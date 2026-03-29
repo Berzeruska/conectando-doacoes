@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Instituição – Conectando Doações</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .user-header {
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--borda);
+    }
+    .avatar {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: #E6F1FB; color: #185FA5;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 18px; flex-shrink: 0;
+    }
+    .anuncio-card-full {
+      border: 1px solid var(--borda);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--branco);
+    }
+    .anuncio-foto {
+      width: 100%; height: 140px; overflow: hidden;
+      background: var(--fundo);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 40px;
+    }
+    .anuncio-foto img { width:100%; height:100%; object-fit:cover; }
+    .busca-input { display: flex; gap: 8px; align-items: center; }
+    .busca-input input { flex: 1; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="topbar">
+    <div class="logo-icon" style="width:36px;height:36px;border-radius:10px;">
+      <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+        <path d="M16 4C9.4 4 4 9.4 4 16s5.4 12 12 12 12-5.4 12-12S22.6 4 16 4zm-1.5 16.4l-4.8-4.8 1.6-1.6 3.2 3.2 6.8-7.8 1.7 1.5-8.5 9.5z" fill="white"/>
+      </svg>
+    </div>
+    <span class="topbar-title">Conectando Doações</span>
+    <button onclick="auth.signOut().then(()=>location.href='index.html')" style="background:none;border:none;font-size:13px;color:var(--texto-sec);cursor:pointer;font-family:inherit;font-weight:600;">Sair</button>
+  </div>
+
+  <div class="user-header" id="userHeader">
+    <div class="avatar" id="avatarInicial">?</div>
+    <div>
+      <div style="font-weight:700;" id="nomeInst">Carregando...</div>
+      <div style="font-size:12px;color:var(--texto-sec);">Instituição</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="abrirTab('busca', this)">Disponíveis</div>
+    <div class="tab" onclick="abrirTab('ativos', this)">Meus Interesses</div>
+    <div class="tab" onclick="abrirTab('historico', this)">Histórico</div>
+    <div class="tab" onclick="abrirTab('conversas', this)">Conversas</div>
+  </div>
+
+  <div id="alertBox" style="padding:8px 16px 0;"></div>
+
+  <div id="painel-busca" class="tab-panel active content" style="padding-bottom:80px;">
+    <div class="busca-input">
+      <input type="text" id="buscaTexto" placeholder="Buscar por título ou localização..." oninput="filtrar()">
+    </div>
+    <div class="filter-row" id="filtroCategoria">
+      <div class="chip active" onclick="setCategoria(this, '')">Todos</div>
+      <div class="chip" onclick="setCategoria(this, 'Alimentos')">Alimentos</div>
+      <div class="chip" onclick="setCategoria(this, 'Roupas')">Roupas</div>
+      <div class="chip" onclick="setCategoria(this, 'Móveis')">Móveis</div>
+      <div class="chip" onclick="setCategoria(this, 'Brinquedos')">Brinquedos</div>
+      <div class="chip" onclick="setCategoria(this, 'Material Escolar')">Escolar</div>
+      <div class="chip" onclick="setCategoria(this, 'Outros')">Outros</div>
+    </div>
+    <div id="listaAnuncios"><div class="empty-state"><div class="spinner" style="border-color:var(--verde);border-top-color:transparent;width:32px;height:32px;margin:0 auto 12px;"></div><p>Carregando...</p></div></div>
+  </div>
+
+  <div id="painel-ativos" class="tab-panel content" style="padding-top:8px;">
+    <div id="listaAtivos"><div class="empty-state"><div class="empty-icon">📋</div><p>Você ainda não manifestou interesse em nenhuma doação.</p></div></div>
+  </div>
+
+  <div id="painel-historico" class="tab-panel content" style="padding-top:8px;">
+    <div id="listaHistorico"><div class="empty-state"><div class="empty-icon">🗂️</div><p>Nenhuma doação concluída ainda.</p></div></div>
+  </div>
+
+  <div id="painel-conversas" class="tab-panel content" style="padding-top:8px;">
+    <div id="listaConversas"><div class="empty-state"><div class="empty-icon">💬</div><p>Nenhuma conversa ativa.</p></div></div>
+  </div>
+
+</div>
+
+<!-- Modal interesse -->
+<div class="modal-overlay hidden" id="modalInteresse">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Confirmar interesse</span>
+      <button class="modal-close" onclick="document.getElementById('modalInteresse').classList.add('hidden')">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <p style="font-size:14px;color:var(--texto-sec);line-height:1.6;">Ao manifestar interesse, o anúncio será reservado para você e um chat será aberto para combinar a retirada.</p>
+      <div style="background:var(--fundo);border-radius:var(--radius-sm);padding:12px;">
+        <div style="font-weight:700;font-size:15px;" id="modalAnuncioTitulo"></div>
+        <div style="font-size:13px;color:var(--texto-sec);margin-top:2px;" id="modalAnuncioMeta"></div>
+      </div>
+      <div id="modalInteresseAlerta"></div>
+      <button class="btn btn-primary" id="btnConfirmarInteresse" onclick="confirmarInteresse()">Confirmar interesse</button>
+      <button class="btn btn-outline" onclick="document.getElementById('modalInteresse').classList.add('hidden')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+  let uid = null;
+  let todosAnuncios = [];
+  let categoriaFiltro = '';
+  let anuncioSelecionado = null;
+  const categoriaEmoji = { Alimentos:'🍎', Roupas:'👕', Móveis:'🛋️', Brinquedos:'🧸', 'Material Escolar':'📚', Outros:'📦' };
+
+  auth.onAuthStateChanged(async (user) => {
+    if (!user) { window.location.href = 'index.html'; return; }
+    uid = user.uid;
+    const doc = await db.collection('users').doc(uid).get();
+    if (!doc.exists || doc.data().tipo !== 'instituicao') { window.location.href = 'index.html'; return; }
+    const dados = doc.data();
+    document.getElementById('nomeInst').textContent = dados.nomeInstituicao || dados.nome || user.email;
+    document.getElementById('avatarInicial').textContent = (dados.nomeInstituicao || dados.nome || 'I')[0].toUpperCase();
+    carregarAnuncios();
+    carregarInteresses();
+    carregarConversas();
+  });
+
+  function abrirTab(id, el) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('painel-' + id).classList.add('active');
+    el.classList.add('active');
+  }
+
+  function setCategoria(el, cat) {
+    categoriaFiltro = cat;
+    document.querySelectorAll('#filtroCategoria .chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    filtrar();
+  }
+
+  function filtrar() {
+    const texto = document.getElementById('buscaTexto').value.toLowerCase();
+    const filtrados = todosAnuncios.filter(a =>
+      (!categoriaFiltro || a.categoria === categoriaFiltro) &&
+      (!texto || a.titulo.toLowerCase().includes(texto) || (a.localizacao||'').toLowerCase().includes(texto))
+    );
+    renderAnuncios(filtrados);
+  }
+
+  function carregarAnuncios() {
+    // Tenta com ordenação, cai para sem ordenação se índice não existir
+    const query = db.collection('anuncios').where('status', '==', 'disponível');
+    
+    query.orderBy('dataCriacao', 'desc').onSnapshot(
+      snap => {
+        todosAnuncios = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        filtrar();
+      },
+      err => {
+        // Índice ainda não criado — carrega sem ordenação
+        query.onSnapshot(snap => {
+          todosAnuncios = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          filtrar();
+        });
+      }
+    );
+  }
+
+  function renderAnuncios(lista) {
+    const el = document.getElementById('listaAnuncios');
+    if (!lista.length) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><p>Nenhuma doação disponível com esses filtros.</p></div>';
+      return;
+    }
+    el.innerHTML = lista.map(a => `
+      <div class="anuncio-card-full">
+        <div class="anuncio-foto">
+          ${a.fotoBase64 ? `<img src="${a.fotoBase64}" alt="">` : (categoriaEmoji[a.categoria]||'📦')}
+        </div>
+        <div class="card-body">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+            <span class="badge badge-disponivel">Disponível</span>
+            <span style="font-size:11px;color:var(--texto-sec);">${escHTML(a.categoria)}</span>
+          </div>
+          <div style="font-weight:700;font-size:15px;margin:6px 0 2px;">${escHTML(a.titulo)}</div>
+          <div class="anuncio-meta">${escHTML(a.localizacao||'Localização não informada')} · ${formatarData(a.dataCriacao)}</div>
+          <p style="font-size:13px;color:var(--texto-sec);line-height:1.5;margin-bottom:12px;">${escHTML(a.descricao).substring(0,120)}${a.descricao&&a.descricao.length>120?'...':''}</p>
+          <button class="btn btn-primary" onclick="abrirModalInteresse('${a.id}', '${escAttr(a.titulo)}', '${escAttr(a.categoria)}', '${escAttr(a.localizacao||'')}')">
+            Manifestar interesse
+          </button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function carregarInteresses() {
+    db.collection('conversas').where('instituicaoId', '==', uid)
+      .onSnapshot(async snap => {
+        const ativos = snap.docs.filter(d => d.data().statusConversa === 'ativa');
+        const hist = snap.docs.filter(d => d.data().statusConversa === 'encerrada');
+        await renderInteresses('listaAtivos', ativos, true);
+        await renderInteresses('listaHistorico', hist, false);
+      });
+  }
+
+  async function renderInteresses(containerId, docs, ativo) {
+    const el = document.getElementById(containerId);
+    if (!docs.length) {
+      el.innerHTML = `<div class="empty-state"><div class="empty-icon">${ativo?'📋':'🗂️'}</div><p>${ativo?'Você ainda não manifestou interesse.':'Nenhuma doação concluída.'}</p></div>`;
+      return;
+    }
+    const items = await Promise.all(docs.map(async doc => {
+      const d = doc.data();
+      const anuncioDoc = await db.collection('anuncios').doc(d.anuncioId).get();
+      const titulo = anuncioDoc.exists ? anuncioDoc.data().titulo : 'Anúncio removido';
+      const loc = anuncioDoc.exists ? (anuncioDoc.data().localizacao||'') : '';
+      return `
+        <div class="card" style="display:flex;align-items:center;gap:12px;padding:14px;cursor:pointer;" onclick="window.location.href='chat.html?id=${doc.id}'">
+          <div style="width:48px;height:48px;background:var(--fundo);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">💬</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHTML(titulo)}</div>
+            <div style="font-size:12px;color:var(--texto-sec);">${loc?escHTML(loc)+' · ':''}<span class="badge ${ativo?'badge-reservado':'badge-finalizado'}" style="font-size:11px;">${ativo?'Em andamento':'Concluído'}</span></div>
+          </div>
+          <span style="color:var(--verde);font-size:18px;">›</span>
+        </div>`;
+    }));
+    el.innerHTML = items.join('');
+  }
+
+  function carregarConversas() {
+    db.collection('conversas').where('instituicaoId', '==', uid).where('statusConversa', '==', 'ativa')
+      .onSnapshot(async snap => {
+        const el = document.getElementById('listaConversas');
+        if (snap.empty) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">💬</div><p>Nenhuma conversa ativa.</p></div>'; return; }
+        const items = await Promise.all(snap.docs.map(async doc => {
+          const d = doc.data();
+          const aDoc = await db.collection('anuncios').doc(d.anuncioId).get();
+          const titulo = aDoc.exists ? aDoc.data().titulo : 'Anúncio';
+          return `<div class="card" style="display:flex;align-items:center;gap:12px;padding:14px;cursor:pointer;" onclick="window.location.href='chat.html?id=${doc.id}'">
+            <div style="font-size:22px;">💬</div>
+            <div style="flex:1;"><div style="font-weight:700;font-size:14px;">${escHTML(titulo)}</div><span class="badge badge-reservado" style="font-size:11px;">Em andamento</span></div>
+            <span style="color:var(--verde);font-size:18px;">›</span>
+          </div>`;
+        }));
+        el.innerHTML = items.join('');
+      });
+  }
+
+  function abrirModalInteresse(id, titulo, categoria, local) {
+    anuncioSelecionado = { id, titulo, categoria, local };
+    document.getElementById('modalAnuncioTitulo').textContent = titulo;
+    document.getElementById('modalAnuncioMeta').textContent = categoria + (local ? ' · ' + local : '');
+    document.getElementById('modalInteresseAlerta').innerHTML = '';
+    document.getElementById('btnConfirmarInteresse').innerHTML = 'Confirmar interesse';
+    document.getElementById('btnConfirmarInteresse').disabled = false;
+    document.getElementById('modalInteresse').classList.remove('hidden');
+  }
+
+  async function confirmarInteresse() {
+    if (!anuncioSelecionado) return;
+    const btn = document.getElementById('btnConfirmarInteresse');
+    btn.innerHTML = '<span class="spinner"></span>'; btn.disabled = true;
+
+    try {
+      const anuncioRef = db.collection('anuncios').doc(anuncioSelecionado.id);
+      const anuncioDoc = await anuncioRef.get();
+
+      if (!anuncioDoc.exists || anuncioDoc.data().status !== 'disponível') {
+        document.getElementById('modalInteresseAlerta').innerHTML = '<div class="alert alert-error">Este anúncio já não está disponível.</div>';
+        btn.innerHTML = 'Confirmar interesse'; btn.disabled = false;
+        return;
+      }
+
+      const convExist = await db.collection('conversas')
+        .where('anuncioId', '==', anuncioSelecionado.id)
+        .where('instituicaoId', '==', uid).get();
+      if (!convExist.empty) {
+        window.location.href = 'chat.html?id=' + convExist.docs[0].id;
+        return;
+      }
+
+      const batch = db.batch();
+      batch.update(anuncioRef, { status: 'reservado', instituicaoId: uid });
+      const convRef = db.collection('conversas').doc();
+      batch.set(convRef, {
+        anuncioId: anuncioSelecionado.id,
+        doadorId: anuncioDoc.data().doadorId,
+        instituicaoId: uid,
+        dataReserva: firebase.firestore.FieldValue.serverTimestamp(),
+        statusConversa: 'ativa'
+      });
+      await batch.commit();
+
+      document.getElementById('modalInteresse').classList.add('hidden');
+      window.location.href = 'chat.html?id=' + convRef.id;
+    } catch(e) {
+      document.getElementById('modalInteresseAlerta').innerHTML = '<div class="alert alert-error">Erro ao registrar interesse. Tente novamente.</div>';
+      btn.innerHTML = 'Confirmar interesse'; btn.disabled = false;
+    }
+  }
+
+  function formatarData(ts) {
+    if (!ts || !ts.toDate) return '';
+    const d = ts.toDate();
+    const diff = Date.now() - d.getTime();
+    if (diff < 3600000) return 'há ' + Math.floor(diff/60000) + 'min';
+    if (diff < 86400000) return 'há ' + Math.floor(diff/3600000) + 'h';
+    return 'há ' + Math.floor(diff/86400000) + 'd';
+  }
+
+  function escHTML(str) { return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function escAttr(str) { return (str||'').replace(/'/g,'&#39;').replace(/"/g,'&quot;'); }
+</script>
+</body>
+</html>
